@@ -23,6 +23,15 @@ class DATFile extends PlatinumFile {
         this.size = size;
         this.ext = ext;
         this.arrayBuffer = arrayBuffer;
+
+        if (!this.root.littleEndian) {
+            // literally swap around every byte
+            let array = new Uint32Array(this.arrayBuffer);
+            for (let i = 0; i < array.length; i++) {
+                array[i] = swap32(array[i]);
+            }
+            this.arrayBuffer = array.buffer;
+        }
     }
 
     async read() {
