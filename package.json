@@ -1,0 +1,33 @@
+{
+  "name": "platinum-extract",
+  "version": "1.0.0",
+  "type": "module",
+  "typings": "./dist/index.d.ts",
+  "description": "A library for extracting files from Platinum Games games",
+  "main": "index.js",
+  "scripts": {
+    "start": "node start.js",
+    "build": "node build.js"
+  },
+  "author": "cabalex",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/encoding-japanese": "^2.0.1",
+    "esbuild-plugin-wasm": "^1.0.0",
+    "typescript": "^4.8.4"
+  },
+  "dependencies": {
+    "@bokuweb/zstd-wasm": "^0.0.17",
+    "@oneidentity/zstd-js": "^1.0.2",
+    "encoding-japanese": "^2.0.0",
+    "esbuild": "^0.15.10",
+    "fs": "^0.0.1-security",
+    "ooz-wasm": "^1.0.1",
+    "path": "^0.12.7"
+  },
+  "browser": {
+    "fs": false,
+    "path": false,
+    "os": false
+  }
+}
