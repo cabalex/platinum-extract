@@ -127,7 +127,7 @@ export default class DAT extends PlatinumFile {
             const size = fileSizesTable[i];
 
             let type = resolveFile(name);
-            let file = await type.extract(arrayBuffer.slice(offset, offset + size), name);
+            let file = await type.extract(arrayBuffer.slice(offset, offset + size), name)?.catch(() => {});
             datFile.files.push(file ||
                 new DATFile(
                     datFile,

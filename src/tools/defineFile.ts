@@ -55,6 +55,8 @@ export default function defineFile(filename: string) {
         /* models */
         case 'wmb': // Model data (extension does not tell you what version it is...)
             return 'model/wmb';
+        case 'col': // Collision data for models
+            return 'model/col';
 
         /* animations */
         case 'mot': // Animation data

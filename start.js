@@ -47,7 +47,7 @@ esbuild.build({
         }
       }
   ],
-    minify: true,
+    minify: false, // Debugging
     sourcemap: true,
     target: 'esnext',
     format: 'esm',

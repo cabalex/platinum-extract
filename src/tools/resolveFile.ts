@@ -2,7 +2,9 @@ import PKZ from '../games/AstralChain/PKZ';
 import BXM from '../games/Global/BXM';
 import CSV from '../games/Global/CSV';
 import DAT from '../games/Global/DAT';
+import MCD from '../games/Global/MCD';
 import WTA from '../games/Global/WTA';
+import WTP from '../games/Global/WTP';
 import CPK from '../games/NieR/CPK';
 import defineFile from './defineFile';
 
@@ -20,10 +22,16 @@ export default function resolveFile(filename: string) {
         case 'text/csv':
             return CSV;
         // images
-        /*case 'texture/wta':
+        case 'texture/wta':
+            return WTA;
         case 'texture/wtp':
-        case 'texture/wtb':
-            return WTA;*/
+            return WTP;
+        //case 'texture/wtb':
+
+
+        // localization
+        case 'localization/mcd':
+            return MCD;
 
         // folders
         case 'folder/pkz':
