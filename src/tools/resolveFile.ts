@@ -16,6 +16,13 @@ import defineFile from './defineFile';
  */
 export default function resolveFile(filename: string) {
     let type = defineFile(filename);
+
+    if (type === 'folder/dat' && filename.match(/^quest(....)\.dat$/) !== null) {
+        // prevent circular imports
+        let AstralChainQuest = require('../games/AstralChain/AstralChainQuest').default;
+        return AstralChainQuest;
+    }
+
     switch(type) {
         case 'text/xml':
             return BXM;

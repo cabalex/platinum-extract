@@ -61,7 +61,10 @@ export default class DAT extends PlatinumFile {
         let arrayBuffer = await readFile(fileBuffer, 'arraybuffer');
         const view = new DataView(arrayBuffer);
 
-        const datFile = new DAT(name);
+        // Because this class is reused for visualization files (Quests, Events, etc)
+        // we need to create a new class for each file. I'm not sure how else to do it
+        // without rewriting the function.
+        const datFile = new this(name);
         datFile.size = arrayBuffer.byteLength;
         //datFile.original = arrayBuffer;
 
@@ -139,6 +142,10 @@ export default class DAT extends PlatinumFile {
                 )
             );
         }
+
+        // if a visualizer class, run it
+        // @ts-ignore
+        if (datFile.constructVisualizer) await datFile.constructVisualizer(datFile);
 
         return datFile;
     }

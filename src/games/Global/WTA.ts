@@ -1,4 +1,5 @@
 import readFile from "../../tools/readFile";
+import { addASTCHeader, loadASTC } from "../AstralChain/tools/ASTC";
 import { addDDSHeader, loadDDS } from "../AstralChain/tools/DDS";
 import { loadImageData } from "../AstralChain/tools/tegrax1swizzle";
 import PlatinumFile from "./PlatinumFile";
@@ -10,28 +11,61 @@ const surfaceTypes = [
     'T_Cube_Array'
 ];
 
+// Credit to Kerilk
+// https://github.com/Kerilk/noesis_bayonetta_pc/blob/master/bayonetta_pc/Nier.h
 const textureFormats = {
     // DDS
     0x25: "R8G8B8A8_UNORM",
-    
-    0x42: "BC1_UNORM",
-    0x43: "BC2_UNORM",
-    0x44: "BC3_UNORM",
-    0x45: "BC4_UNORM",
-    0x46: "BC1_UNORM_SRGB",
-    0x47: "BC2_UNORM_SRGB",
-    0x48: "BC3_UNORM_SRGB",
-    0x49: "BC4_SNORM",
-    0x50: "BC6H_UF16",
+    0x38: "R8_G8_B8_A8_SRGB",
+
+    0x42: "BC1_UNORM", //DXT1
+	0x43: "BC2_UNORM", //DXT3
+	0x44: "BC3_UNORM", //DXT5
+	0x45: "BC4_UNORM",
+	0x46: "BC1_SRGB",
+	0x47: "BC2_SRGB",
+	0x48: "BC3_SRGB",
+	0x49: "BC4_SRGB",
+
+    0x4B: "BC5_UNORM",
+	0x4C: "BC5_SRGB",
+	0x4D: "BC7_UNORM",
+	0x4E: "BC7_SRGB",
+	0x4F: "BC6H_F16",
+	0x50: "BC6H_UF16",
+
+    0x79: "ASTC_4x4_UNORM",
+    0x7A: "ASTC_5x4_UNORM",
+	0x7B: "ASTC_5x5_UNORM",
+	0x7C: "ASTC_6x5_UNORM",
+	0x7D: "ASTC_6x6_UNORM",
+	0x7E: "ASTC_8x5_UNORM",
+	0x7F: "ASTC_8x6_UNORM",
+	0x80: "ASTC_8x8_UNORM",
+	0x81: "ASTC_10x5_UNORM",
+	0x82: "ASTC_10x6_UNORM",
+	0x83: "ASTC_10x8_UNORM",
+	0x84: "ASTC_10x10_UNORM", // Thanks DniweTamp
+	0x85: "ASTC_12x10_UNORM",
+	0x86: "ASTC_12x12_UNORM",
+	0x87: "ASTC_4x4_SRGB",
+	0x88: "ASTC_5x4_SRGB",
+	0x89: "ASTC_5x5_SRGB",
+	0x8A: "ASTC_6x5_SRGB",
+	0x8B: "ASTC_6x6_SRGB",
+	0x8C: "ASTC_8x5_SRGB",
+	0x8D: "ASTC_8x6_SRGB",
+	0x8E: "ASTC_8x8_SRGB",
+	0x8F: "ASTC_10x5_SRGB",
+	0x90: "ASTC_10x6_SRGB",
+	0x91: "ASTC_10x8_SRGB",
+	0x92: "ASTC_10x10_SRGB",  // Thanks DniweTamp
+	0x93: "ASTC_12x10_SRGB",
+	0x94: "ASTC_12x12_SRGB",
+
     // ASTC (weird texture formats ??)
     0x2D: "ASTC_4x4_UNORM",
-    0x38: "ASTC_8x8_UNORM",
     0x3A: "ASTC_12x12_UNORM",
-    // ASTC
-    0x79: "ASTC_4x4_UNORM",
-    0x80: "ASTC_8x8_UNORM",
-    0x87: "ASTC_4x4_SRGB",
-    0x8E: "ASTC_8x8_SRGB"
 }
 
 export class WTATexture {
@@ -63,6 +97,17 @@ export class WTATexture {
         this.unknownArrayValue = unknownArrayValue;
     }
 
+    get game() {
+        switch(this.magic) {
+            case 3232856: // XT1\x00 (Astral Chain)
+                return "ASTRALCHAIN";
+            case 2019914798: // .tex (NieR Automata Switch)
+                return "NIERAUTOMATASWITCH";
+            case 0x0: // NieR Automata PC
+                return "NIERAUTOMATA";
+        }
+    }
+
     get _format() {
         // @ts-ignore
         return textureFormats[this.format];
@@ -92,9 +137,10 @@ export class WTATexture {
         let magic = view.getUint32(offset, true);
 
         let texture = new WTATexture(identifier, wtpOffset, wtpSize, unknownArrayValue);
+        texture.magic = magic;
+        
         switch(magic) {
             case 3232856: // XT1\x00 (Astral Chain)
-                texture.magic = magic;
                 // texture.unknown = view.getUint32(offset + 4, true);
                 texture.imageSize = view.getUint32(offset + 8, true);
                 texture.headerSize = view.getUint32(offset + 16, true);
@@ -111,14 +157,35 @@ export class WTATexture {
                 if (["T_Cube", "T_Cube_Array"].includes(texture._type)) {
                     texture.arrayCount = 6;
                 };
-
-                console.log(offset + 20, view.getUint32(offset + 20, true), texture._type);
                 
                 return [texture, offset + 56];
             case 2019914798: // .tex (NieR Automata Switch)
-                texture.magic = magic;
-                console.warn("Not supported: NieR Automata Switch textures")
-                break;
+                texture.format = view.getUint32(offset + 4, true);
+                // texture.unknown = view.getUint32(offset + 8, true);
+                texture.width = view.getUint32(offset + 12, true);
+                texture.height = view.getUint32(offset + 16, true);
+                texture.depth = view.getUint32(offset + 20, true);
+                texture.mipCount = view.getUint32(offset + 24, true);
+                // texture.unknown2 = view.getUint32(offset + 28, true); // always 256?
+                // texture.somedecimal = view.getFloat16(offset + 32, true);
+                // texture.unknown3 = view.getUint32(offset + 34, true);
+
+                // values not shown in header; make a guess?
+                texture.type = 0x1;
+                texture.textureLayout = 0x4;
+
+                // credit: MasaGratoR
+                if (texture.height > 256) {
+                    texture.arrayCount = 1;
+                } else if (texture.height > 128) {
+                    texture.arrayCount = 4;
+                } else {
+                    texture.arrayCount = 2;
+                }
+
+                console.log(texture.format)
+                
+                return [texture, offset + 0x100];
             default:
                 console.warn("Unknown texture magic: " + magic);
         }
@@ -145,16 +212,7 @@ export class WTATexture {
         let canvas;
         if (this._format.includes('ASTC')) {
             // ASTC
-            console.warn('ASTC not supported')
-            canvas = document.createElement('canvas');
-            canvas.width = this.width;
-            canvas.height = this.height;
-            let ctx = canvas.getContext('2d');
-            if (ctx) {
-                ctx.font = '24px Arial';
-                ctx.fillStyle = 'white';
-                ctx.fillText('ASTC Not supported.', 10, 50);
-            }
+            canvas = loadASTC(this._format, this.width, this.height, this.depth, wtpImageData);
         } else {
             // DDS
             canvas = loadDDS(this._format, this.width, this.height, this.depth, wtpImageData);
@@ -185,8 +243,7 @@ export class WTATexture {
         let canvas;
         if (this._format.includes('ASTC')) {
             // ASTC
-            console.warn('ASTC not supported')
-            return new ArrayBuffer(0);
+            return addASTCHeader(this._format, this.width, this.height, this.depth, wtpImageData);
         } else {
             // DDS
             return addDDSHeader(this._format, this.width, this.height, this.depth, wtpImageData);

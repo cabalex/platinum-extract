@@ -38,6 +38,10 @@ export default class BXM extends PlatinumFile {
         return this.stringifiedXML();
     }
 
+    /**
+     * Loads a stringified XML into the BXM object.
+     * Warning: replaces all contents inside the BXM!
+     */
     fromString(xml: string) {
         this.data = this.parseXML(xml);
     }

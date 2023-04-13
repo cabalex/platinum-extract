@@ -1,5 +1,6 @@
 /* An attempt to emulate https://github.com/KillzXGaming/Switch-Toolbox/blob/604f7b3d369bc97d9d05632da3211ed11b990ba7/Switch_Toolbox_Library/Texture%20Decoding/Switch/TegraX1Swizzle.cs
  jesus christ i do not know how to write code
+ sorry for the mess, I mostly just copied and coverted code lol
  copied from https://github.com/aboood40091/BNTX-Extractor/blob/master/swizzle.py
  Based on Ryujinx's image table 
  https://github.com/Ryujinx/Ryujinx/blob/c86aacde76b5f8e503e2b412385c8491ecc86b3b/Ryujinx.Graphics/Graphics3d/Texture/ImageUtils.cs
@@ -17,9 +18,11 @@ export const formatTable = {
 	"BC4_SNORM": [8, 4, 4, 1],
 	"BC6H_UF16": [16, 4, 4, 1],
 	"ASTC_4x4_UNORM": [16, 4, 4, 1],
+	"ASTC_6x6_UNORM": [16, 6, 6, 1],
 	"ASTC_8x8_UNORM": [16, 8, 8, 1],
 	"ASTC_4x4_SRGB": [16, 4, 4, 1],
-	"ASTC_8x8_SRGB": [16, 8, 8, 1]
+	"ASTC_6x6_SRGB": [16, 6, 6, 1],
+	"ASTC_8x8_SRGB": [16, 8, 8, 1],
 }
 // each one: bytesPerPixel, blockWidth, blockHeight, blockDepth, targetBuffer (but i removed targetBuffer)
 
@@ -50,7 +53,7 @@ function round_up(x: number, y: number) {
 	return ((x - 1) | (y - 1)) + 1
 }
 
-
+// Do not call this manually; refer to loadImageData and compressImageData functions.
 function _swizzle(width: number, height: number, depth: number, blkWidth: number, blkHeight: number, blkDepth: number, roundPitch: number, bpp: number, tileMode: number, blockHeightLog2: number, data: Uint8Array, toSwizzle: number) {
 	let block_height = 1 << blockHeightLog2
     
@@ -97,12 +100,12 @@ function _swizzle(width: number, height: number, depth: number, blkWidth: number
 	return result.slice(0, width * height * bpp).buffer;
 }
 
-//def deswizzle(width, height, blkWidth, blkHeight, bpp, tileMode, alignment, size_range, data):
+// Do not call this manually; refer to loadImageData and compressImageData functions.
 export function deswizzle(width: number, height: number, depth: number, blkWidth: number, blkHeight: number, blkDepth: number, roundPitch: number, bpp: number, tileMode: number, size_range: number, data: ArrayBuffer) {
 	return _swizzle(width, height, depth, blkWidth, blkHeight, blkDepth, roundPitch, bpp, tileMode, size_range, new Uint8Array(data), 0)
-	//return _swizzle(width, height, blkWidth, blkHeight, bpp, tileMode, alignment, size_range, data, 0)
 }
 
+// Do not call this manually; refer to loadImageData and compressImageData functions.
 export function swizzle(width: number, height: number, depth: number, blkWidth: number, blkHeight: number, blkDepth: number, roundPitch: number, bpp: number, tileMode: number, size_range: number, data: ArrayBuffer) {
     return _swizzle(width, height, depth, blkWidth, blkHeight, blkDepth, roundPitch, bpp, tileMode, size_range, new Uint8Array(data), 1)
 }
@@ -125,6 +128,20 @@ export function getAddrBlockLinear(x: number, y: number, image_width: number, by
 
 }
 
+/**
+ * Unswizzles an image and returns an ArrayBuffer containing the image data.
+ * @param format The stringified format of the image. (e.g. "ASTC_4x4_UNORM")
+ * @param width Image width, in pixels.
+ * @param height Image height, in pixels.
+ * @param depth Image depth. Usually 1.
+ * @param arrayCount The array count of the texture.
+ * @param mipCount Number of mipmaps.
+ * @param imageData The image data, as an ArrayBuffer.
+ * @param blockHeightLog2 The base 2 log of the block height. (e.g. this.textureLayout & 7)
+ * @param target (optional) Leave this as 1.
+ * @param linearTileMode (optional) Whether to use LINEAR tile mode. Leave this as false.
+ * @returns ArrayBuffer of the unswizzled image, or false if unswizzling failed.
+ */
 export function loadImageData(format: string, width: number, height: number, depth: number, arrayCount: number, mipCount: number, imageData: ArrayBuffer, blockHeightLog2: number, target=1, linearTileMode=false) {
 	let [bpp, blkWidth, blkHeight, blkDepth] = getFormatTable(format)
 	let blockHeight = DIV_ROUND_UP(height, blkHeight)
@@ -168,8 +185,8 @@ export function loadImageData(format: string, width: number, height: number, dep
 					// yeah, i'm not doing that
 					return result
                 } catch(e) {
-					throw e
-					return false
+					console.error("Failed to unswizzle!", e);
+					return false;
                 }
             }
 			arrayOffset += imageData.byteLength / arrayCount
@@ -178,6 +195,20 @@ export function loadImageData(format: string, width: number, height: number, dep
 	return false
 }
 
+/**
+ * Swizzles an image and returns an ArrayBuffer containing the image data.
+ * @param format The stringified format of the image. (e.g. "ASTC_4x4_UNORM")
+ * @param width Image width, in pixels.
+ * @param height Image height, in pixels.
+ * @param depth Image depth. Usually 1.
+ * @param arrayCount The array count of the texture.
+ * @param mipCount Number of mipmaps.
+ * @param imageData The image data, as an ArrayBuffer.
+ * @param blockHeightLog2 The base 2 log of the block height. (e.g. this.textureLayout & 7)
+ * @param target (optional) Leave this as 1.
+ * @param linearTileMode (optional) Whether to use LINEAR tile mode. Leave this as false.
+ * @returns ArrayBuffer of the swizzled image, or false if swizzling failed.
+ */
 export function compressImageData(format: string, width: number, height: number, depth: number, arrayCount: number, mipCount: number, imageData: ArrayBuffer, blockHeightLog2: number, target=1, linearTileMode=false) {
 	let [bpp, blkWidth, blkHeight, blkDepth] = getFormatTable(format)
 	let blockHeight = DIV_ROUND_UP(height, blkHeight)
