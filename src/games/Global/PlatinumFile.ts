@@ -13,6 +13,8 @@ export default class PlatinumFile {
     }
 
     async getArrayBuffer() {
-        return this.arrayBuffer || new ArrayBuffer(this.size);
+        if (!this.arrayBuffer) console.warn("Attempting to grab ArrayBuffer of a file that doesn't have one or does not overwrite method... are you sure you wanted to do this?")
+
+        return this.arrayBuffer || new ArrayBuffer(0);
     }
 }

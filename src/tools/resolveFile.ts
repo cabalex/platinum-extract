@@ -22,6 +22,10 @@ export default function resolveFile(filename: string) {
         let AstralChainQuest = require('../games/AstralChain/AstralChainQuest').default;
         return AstralChainQuest;
     }
+    if (filename.match(/^SlotData_.\.dat$/) !== null) {
+        let AstralChainSlotData = require('../games/AstralChain/AstralChainSlotData').default;
+        return AstralChainSlotData;
+    }
 
     switch(type) {
         case 'text/xml':

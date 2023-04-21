@@ -1,7 +1,8 @@
+import gameSupport, { games } from "../../tools/gameSupport";
 import readFile from "../../tools/readFile";
-import { addASTCHeader, loadASTC } from "../AstralChain/tools/ASTC";
-import { addDDSHeader, loadDDS } from "../AstralChain/tools/DDS";
-import { loadImageData } from "../AstralChain/tools/tegrax1swizzle";
+import { addASTCHeader, loadASTC } from "../SwitchGlobal/ASTC";
+import { addDDSHeader, loadDDS } from "../SwitchGlobal/DDS";
+import { loadImageData } from "../SwitchGlobal/tegrax1swizzle";
 import PlatinumFile from "./PlatinumFile";
 
 const surfaceTypes = [
@@ -82,8 +83,8 @@ export class WTATexture {
     mipCount = 1;
     type = 0x44;
     format = 0x1;
-    width = 1;
-    height = 1;
+    width = 0;
+    height = 0;
     depth = 1;
     // unknown4: number;
     textureLayout = 0;
@@ -97,14 +98,16 @@ export class WTATexture {
         this.unknownArrayValue = unknownArrayValue;
     }
 
-    get game() {
+    get game(): games {
         switch(this.magic) {
             case 3232856: // XT1\x00 (Astral Chain)
-                return "ASTRALCHAIN";
+                return games.AstralChain;
             case 2019914798: // .tex (NieR Automata Switch)
-                return "NIERAUTOMATASWITCH";
-            case 0x0: // NieR Automata PC
-                return "NIERAUTOMATA";
+                return games.NieRAutomataSwitch;
+            case 0x47: // NieR Automata PC
+                return games.NieRAutomata;
+            default:
+                return games.PlatinumGeneric;
         }
     }
 
@@ -186,30 +189,86 @@ export class WTATexture {
                 console.log(texture.format)
                 
                 return [texture, offset + 0x100];
+            case 71: // NieR Automata DXT1
+                texture.format = 0x42;
+                return [texture, offset + 20];
+            case 74: // NieR Automata DXT3
+                texture.format = 0x42;
+                return [texture, offset + 20];
+            case 77: // NieR Automata DXT5
+                texture.format = 0x42;
+                return [texture, offset + 20];
             default:
                 console.warn("Unknown texture magic: " + magic);
         }
         return [texture, offset + 0x100]
     }
 
+    // share code for extracting texture data
+    private getTextureData(wtpTexture: ArrayBuffer) {
+        let wtpImageData = wtpTexture.slice(this.offset, this.offset + this.size);
+        
+        if (gameSupport[this.game].deswizzlingRequired) {
+            // deswizzle
+            let blockHeightLog2 = this.textureLayout & 7;
+            wtpImageData = loadImageData(
+                this._format,
+                this.width,
+                this.height,
+                this.depth,
+                this.arrayCount,
+                this.mipCount,
+                wtpImageData,
+                blockHeightLog2
+            ) || new ArrayBuffer(0);
+
+            if (wtpImageData.byteLength === 0)
+                throw new Error("Texture swizzling failed!");
+        } else if (this.width === 0 || this.height === 0) {
+            // Unknown data: Get texture data from DDS header
+            let view = new DataView(wtpImageData);
+            
+            if (view.getUint32(0, true) !== 542327876) throw new Error("Invalid DDS header!");
+
+            this.headerSize = view.getUint32(4, true);
+            this.width = view.getUint32(12, true);
+            this.height = view.getUint32(16, true);
+            this.depth = 1;
+
+            console.log(`Unknown texture: ${this.identifier} (${this.width}x${this.height}x${this.depth})`)
+            
+            switch(view.getUint32(84, true)) {
+                case 827611204: // DXT1
+                    this.format = 0x42;
+                    break;
+                case 861165636: // DXT3
+                    this.format = 0x43;
+                    break;
+                case 894720068: // DXT5
+                    this.format = 0x44;
+                    break;
+                case 959535172: // DX10
+                    this.format = 0x50;
+                    break;
+                default:
+                    console.warn(`Unknown DDS format: ${view.getUint32(84, true)}. This texture may not load correctly.`)
+            }
+
+            // Have only image data in the final product, no header
+            wtpImageData = wtpImageData.slice(Math.ceil(this.headerSize / 16) * 16);
+        }
+
+        return wtpImageData
+    }
+
+    /**
+     * Loads a texture into a canvas.
+     * @returns 
+     */
     load(wtpTexture: ArrayBuffer) {
-        // deswizzle
-        let blockHeightLog2 = this.textureLayout & 7;
-        let wtpImageData = loadImageData(
-            this._format,
-            this.width,
-            this.height,
-            this.depth,
-            this.arrayCount,
-            this.mipCount,
-            wtpTexture.slice(this.offset, this.offset + this.size),
-            blockHeightLog2
-        );
-
-        if (wtpImageData === false || wtpImageData.byteLength === 0)
-            throw new Error("Texture swizzling error: returned blank array");
-
+        let wtpImageData = this.getTextureData(wtpTexture);
         let canvas;
+
         if (this._format.includes('ASTC')) {
             // ASTC
             canvas = loadASTC(this._format, this.width, this.height, this.depth, wtpImageData);
@@ -225,22 +284,8 @@ export class WTATexture {
      * Returns an ArrayBuffer of the texture as a file.
      */
     download(wtpTexture: ArrayBuffer) {
-        let blockHeightLog2 = this.textureLayout & 7;
-        let wtpImageData = loadImageData(
-            this._format,
-            this.width,
-            this.height,
-            this.depth,
-            this.arrayCount,
-            this.mipCount,
-            wtpTexture.slice(this.offset, this.offset + this.size),
-            blockHeightLog2
-        );
+        let wtpImageData = this.getTextureData(wtpTexture);
 
-        if (wtpImageData === false || wtpImageData.byteLength === 0)
-            throw new Error("Texture swizzling error: returned blank array");
-
-        let canvas;
         if (this._format.includes('ASTC')) {
             // ASTC
             return addASTCHeader(this._format, this.width, this.height, this.depth, wtpImageData);

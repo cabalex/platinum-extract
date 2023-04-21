@@ -15,6 +15,9 @@
 export default function defineFile(filename: string) {
     let ext = filename.split('.').pop()?.toLowerCase();
 
+    if (filename.match(/^SlotData_.\.dat$/) !== null) return 'save/astralchain_slot';
+    if (filename.match(/^GameData\.dat$/) !== null) return 'save/astralchain_game';
+
     switch(ext) {
         case 'bxm': // Binary XML files
         case 'seq':

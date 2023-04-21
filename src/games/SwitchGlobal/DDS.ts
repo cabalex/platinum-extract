@@ -54,6 +54,15 @@ function getDDSHeader(format: string, width: number, height: number, depth: numb
     ]).buffer
 }
 
+/**
+ * Prepends a DDS header to DDS texture data, for exporting.
+ * @param format The format of the texture, e.g. "BC1_UNORM".
+ * @param width Texture width
+ * @param height Texture height
+ * @param depth Texture depth (usually 1)
+ * @param textureData An ArrayBuffer containing the texture data.
+ * @returns An ArrayBuffer containing the complete file (both header and data).
+ */
 export function addDDSHeader(format: string, width: number, height: number, depth: number, textureData: ArrayBuffer) {
     // Add header to data
     let ddsHeader = getDDSHeader(format, width, height, depth);
@@ -64,7 +73,15 @@ export function addDDSHeader(format: string, width: number, height: number, dept
     return ddsFile.buffer;
 }
 
-// Loads a DDS texture into a canvas element.
+/**
+ * Loads a DDS texture into a canvas element. Renders using WebGL.
+ * @param format The format of the texture, e.g. "BC1_UNORM".
+ * @param width Texture width
+ * @param height Texture height
+ * @param depth Texture depth (usually 1)
+ * @param textureData An ArrayBuffer containing the texture data.
+ * @returns A canvas element containing the texture.
+ */
 export function loadDDS(format: string, width: number, height: number, depth: number, textureData: ArrayBuffer) {
     let canvas = document.createElement('canvas');
     let gl = canvas.getContext('webgl');
@@ -108,30 +125,30 @@ export function loadDDS(format: string, width: number, height: number, depth: nu
     `;
 
     const fs = `
-    precision mediump float;
+        precision mediump float;
 
-// our texture
-uniform sampler2D u_image;
+        // our texture
+        uniform sampler2D u_image;
 
-// the texCoords passed in from the vertex shader.
-varying vec2 v_texCoord;
+        // the texCoords passed in from the vertex shader.
+        varying vec2 v_texCoord;
 
-void main() {
-   gl_FragColor = texture2D(u_image, v_texCoord);
-}
+        void main() {
+            gl_FragColor = texture2D(u_image, v_texCoord);
+        }
     `;
 
     var program = createProgram(gl, [vs, fs]);
     // look up where the vertex data needs to go.
-  var positionLocation = gl.getAttribLocation(program, "a_position");
-  var texcoordLocation = gl.getAttribLocation(program, "a_texCoord");
+    var positionLocation = gl.getAttribLocation(program, "a_position");
+    var texcoordLocation = gl.getAttribLocation(program, "a_texCoord");
 
-  // Create a buffer to put three 2d clip space points in
-  var positionBuffer = gl.createBuffer();
+    // Create a buffer to put three 2d clip space points in
+    var positionBuffer = gl.createBuffer();
 
-  // Bind it to ARRAY_BUFFER (think of it as ARRAY_BUFFER = positionBuffer)
-  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-  // Set a rectangle the same size as the image.
+    // Bind it to ARRAY_BUFFER (think of it as ARRAY_BUFFER = positionBuffer)
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    // Set a rectangle the same size as the image.
     var x1 = 0;
     var x2 = width;
     var y1 = 0;

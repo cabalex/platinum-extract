@@ -19,6 +19,9 @@ How to get started:
 
 My code is not the highest quality. Sorry.
 
+## Notes
+- **ASTC decoding requires a separate WASM file.** This file (you need both JS and WASM) is included in `cpp/files/astc_decomp`, and is loaded into the extractor on startup. You can see the main web extractor to see how it is used (just load the `astc_decomp.js` file and then you can use `Module`).
+
 ## Thanks
 - Icons by Icons8
 - Kerilk's [bayonetta-tools](https://github.com/Kerilk/bayonetta_tools/)
