@@ -3,7 +3,6 @@ export const items = {
 };
 
 export const abilities: any = {
-    0xFFFF: "Ability Code",
     0: "Attack Up +[HUDTEXT:VALUE_NUM ]%",
     1: "Attack Up +[HUDTEXT:VALUE_NUM ]%",
     2: "Attack Up +[HUDTEXT:VALUE_NUM ]%",
@@ -157,7 +156,7 @@ export function getAbility(id: number, subability=false, value?:number) {
 
     return (subability ? subabilities[id] : abilities[id])
         .replace("[HUDTEXT:VALUE_NUM ]", value)
-        .replace("[HUDTEXT:DECTEN_NUM ]", abilityNum[id] / 10)
+        .replace("[HUDTEXT:DECTEN_NUM ]", value / 10)
         .replace("[HUDTEXT:DECHUN_NUM ]", value / 100)
 }
 
